@@ -4,8 +4,8 @@
   "description": "AIプロンプトの定番指示をパーツ化して、選んで組み立ててコピーできるPWA。",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f6f5f1",
-  "theme_color": "#0f766e",
+  "background_color": "#f7f2ea",
+  "theme_color": "#111827",
   "icons": [
     {
       "src": "icon.svg",

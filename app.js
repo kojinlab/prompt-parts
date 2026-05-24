@@ -126,6 +126,7 @@ function renderParts() {
         <span class="tag">${categoryLabels[part.category]}</span>
       </div>
       <p class="part-body">${escapeHtml(part.body)}</p>
+      <button class="add-part" type="button">追加</button>
     `;
     card.addEventListener("click", () => addSelected(part.id));
     card.addEventListener("keydown", (event) => {
@@ -139,7 +140,7 @@ function renderSelected() {
   selectedList.innerHTML = "";
 
   if (selectedIds.length === 0) {
-    selectedList.innerHTML = '<p class="part-body">左のパーツを選ぶと、ここに積み上がります。</p>';
+    selectedList.innerHTML = '<p class="part-body">追加したパーツがここに並びます。</p>';
   }
 
   selectedIds.forEach((id, index) => {
@@ -155,9 +156,9 @@ function renderSelected() {
       </div>
       <p class="selected-body">${escapeHtml(part.body)}</p>
       <div class="selected-actions">
-        <button class="ghost" type="button" data-action="up">上へ</button>
-        <button class="ghost" type="button" data-action="down">下へ</button>
-        <button class="ghost delete" type="button" data-action="delete">削除</button>
+        <button class="ghost" type="button" data-action="up" title="左へ">←</button>
+        <button class="ghost" type="button" data-action="down" title="右へ">→</button>
+        <button class="ghost delete" type="button" data-action="delete" title="削除">×</button>
       </div>
     `;
 
@@ -167,21 +168,27 @@ function renderSelected() {
     selectedList.append(item);
   });
 
-  updateOutput();
 }
 
-function updateOutput() {
+function rebuildOutputFromSelected() {
   const body = selectedIds
     .map((id) => state.parts.find((part) => part.id === id)?.body)
     .filter(Boolean)
     .join("\n\n");
-  const memo = memoInput.value.trim();
-  outputText.value = [body, memo].filter(Boolean).join("\n\n");
+  outputText.value = body;
 }
 
 function addSelected(id) {
+  const part = state.parts.find((item) => item.id === id);
+  if (!part) return;
   selectedIds.push(id);
   renderSelected();
+  appendToOutput(part.body);
+  outputText.focus();
+}
+
+function appendToOutput(text) {
+  outputText.value = [outputText.value.trim(), text].filter(Boolean).join("\n\n");
 }
 
 function moveSelected(index, direction) {
@@ -190,11 +197,13 @@ function moveSelected(index, direction) {
   const [item] = selectedIds.splice(index, 1);
   selectedIds.splice(nextIndex, 0, item);
   renderSelected();
+  rebuildOutputFromSelected();
 }
 
 function removeSelected(index) {
   selectedIds.splice(index, 1);
   renderSelected();
+  rebuildOutputFromSelected();
 }
 
 function escapeHtml(value) {
@@ -216,7 +225,6 @@ document.querySelectorAll(".category").forEach((button) => {
 });
 
 searchInput.addEventListener("input", renderParts);
-memoInput.addEventListener("input", updateOutput);
 outputText.addEventListener("input", () => {
   copyStatus.textContent = "";
 });
@@ -224,8 +232,26 @@ outputText.addEventListener("input", () => {
 document.querySelector("#clearButton").addEventListener("click", () => {
   selectedIds = [];
   memoInput.value = "";
-  renderSelected();
+  outputText.value = "";
+  selectedList.innerHTML = '<p class="part-body">追加したパーツがここに並びます。</p>';
+  copyStatus.textContent = "";
 });
+
+document.querySelector("#memoAddButton").addEventListener("click", addMemo);
+memoInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addMemo();
+  }
+});
+
+function addMemo() {
+  const memo = memoInput.value.trim();
+  if (!memo) return;
+  outputText.value = [outputText.value.trim(), memo].filter(Boolean).join("\n\n");
+  memoInput.value = "";
+  outputText.focus();
+}
 
 document.querySelector("#copyButton").addEventListener("click", async () => {
   if (!outputText.value.trim()) return;
@@ -244,117 +270,18 @@ document.querySelector("#partForm").addEventListener("submit", (event) => {
   const body = document.querySelector("#bodyInput").value.trim();
   if (!title || !body) return;
 
-  state.parts.unshift({
+  const newPart = {
     id: crypto.randomUUID(),
     category,
     title,
     body,
-  });
+  };
+  state.parts.unshift(newPart);
   saveState();
   event.currentTarget.reset();
   renderParts();
+  addSelected(newPart.id);
 });
-
-document.querySelector("#markdownImportButton").addEventListener("click", async () => {
-  const urlInput = document.querySelector("#markdownUrlInput");
-  const status = document.querySelector("#markdownImportStatus");
-  const category = document.querySelector("#markdownCategoryInput").value;
-  const sourceUrl = urlInput.value.trim();
-  if (!sourceUrl) return;
-
-  status.textContent = "取り込み中...";
-
-  try {
-    const markdown = await fetchMarkdown(sourceUrl);
-    const imported = extractPromptCandidates(markdown, category);
-    if (imported.length === 0) {
-      status.textContent = "候補が見つかりませんでした。見出しやコードブロックのあるMarkdownを指定してください。";
-      return;
-    }
-
-    state.parts = [...imported, ...state.parts];
-    saveState();
-    renderParts();
-    status.textContent = `${imported.length}件の候補を追加しました。`;
-    urlInput.value = "";
-  } catch (error) {
-    status.textContent = "取り込みに失敗しました。raw Markdown URLか公開GitHubリポジトリを指定してください。";
-  }
-});
-
-async function fetchMarkdown(inputUrl) {
-  const urls = buildMarkdownUrls(inputUrl);
-  let lastError;
-
-  for (const url of urls) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.text();
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError;
-}
-
-function buildMarkdownUrls(inputUrl) {
-  const url = new URL(inputUrl);
-  if (url.hostname === "github.com") {
-    const [, owner, repo, treeOrBlob, branch, ...pathParts] = url.pathname.split("/");
-    if (!owner || !repo) return [inputUrl];
-
-    if (treeOrBlob === "blob" && branch && pathParts.length > 0) {
-      return [`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${pathParts.join("/")}`];
-    }
-
-    return [
-      `https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`,
-      `https://raw.githubusercontent.com/${owner}/${repo}/master/README.md`,
-    ];
-  }
-
-  return [inputUrl];
-}
-
-function extractPromptCandidates(markdown, category) {
-  const fencedBlocks = [...markdown.matchAll(/```(?:[a-zA-Z0-9_-]+)?\n([\s\S]*?)```/g)]
-    .map((match) => match[1].trim())
-    .filter((value) => value.length >= 24 && value.length <= 1200);
-
-  const headingBlocks = markdown
-    .split(/\n(?=#{1,3}\s)/)
-    .map((block) => block.trim())
-    .filter(Boolean)
-    .map((block) => {
-      const lines = block.split("\n");
-      const title = lines[0].replace(/^#{1,3}\s*/, "").trim();
-      const body = lines
-        .slice(1)
-        .join("\n")
-        .replace(/!\[[^\]]*]\([^)]*\)/g, "")
-        .replace(/\[[^\]]+]\([^)]*\)/g, (match) => match.replace(/\[|\]\([^)]*\)/g, ""))
-        .trim();
-      return { title, body };
-    })
-    .filter((part) => part.title && part.body.length >= 24 && part.body.length <= 1200);
-
-  const candidates = [
-    ...headingBlocks,
-    ...fencedBlocks.map((body, index) => ({
-      title: `インポート候補 ${index + 1}`,
-      body,
-    })),
-  ].slice(0, 20);
-
-  return candidates.map((candidate) => ({
-    id: crypto.randomUUID(),
-    category,
-    title: candidate.title.slice(0, 40),
-    body: candidate.body,
-  }));
-}
 
 document.querySelector("#exportButton").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
