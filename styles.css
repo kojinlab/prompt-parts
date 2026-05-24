@@ -246,6 +246,43 @@ textarea {
   gap: 12px;
 }
 
+.bundle-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.bundle-card {
+  display: grid;
+  gap: 6px;
+  min-height: 118px;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(67, 56, 202, 0.1), transparent 55%),
+    #ffffff;
+  color: var(--ink);
+  padding: 12px;
+  text-align: left;
+}
+
+.bundle-card strong {
+  font-size: 15px;
+}
+
+.bundle-card span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.bundle-card:hover {
+  background:
+    linear-gradient(135deg, rgba(232, 93, 79, 0.13), transparent 55%),
+    #ffffff;
+}
+
 .part-card,
 .selected-item {
   border: 1px solid var(--line);
@@ -268,6 +305,21 @@ textarea {
 
 .part-card:nth-child(3n) {
   border-top-color: var(--gold);
+}
+
+.part-card[data-category="image"] {
+  border-top-color: var(--indigo);
+  background:
+    linear-gradient(160deg, rgba(67, 56, 202, 0.08), transparent 42%),
+    #ffffff;
+}
+
+.part-card[data-category="research"] {
+  border-top-color: #2563eb;
+}
+
+.part-card[data-category="safety"] {
+  border-top-color: var(--danger);
 }
 
 .part-card:hover {

@@ -61,12 +61,16 @@
       <div class="app-shell">
         <aside class="sidebar" aria-label="カテゴリ">
           <button class="category active" data-category="all" type="button">すべて</button>
+          <button class="category" data-category="clarification" type="button">確認質問</button>
           <button class="category" data-category="flow" type="button">進行制御</button>
           <button class="category" data-category="quality" type="button">品質担保</button>
           <button class="category" data-category="format" type="button">出力形式</button>
           <button class="category" data-category="coding" type="button">開発</button>
           <button class="category" data-category="business" type="button">事業評価</button>
           <button class="category" data-category="sns" type="button">SNS</button>
+          <button class="category" data-category="research" type="button">調査</button>
+          <button class="category" data-category="image" type="button">画像生成</button>
+          <button class="category" data-category="safety" type="button">制約</button>
         </aside>
 
         <section class="panel library">
@@ -77,6 +81,7 @@
             </div>
             <input id="searchInput" type="search" placeholder="検索" autocomplete="off" />
           </div>
+          <div class="bundle-list" id="bundleList"></div>
           <div class="parts-list" id="partsList"></div>
         </section>
 
@@ -95,12 +100,16 @@
             <label class="field">
               <span>カテゴリ</span>
               <select id="categoryInput">
+                <option value="clarification">確認質問</option>
                 <option value="flow">進行制御</option>
                 <option value="quality">品質担保</option>
                 <option value="format">出力形式</option>
                 <option value="coding">開発</option>
                 <option value="business">事業評価</option>
                 <option value="sns">SNS</option>
+                <option value="research">調査</option>
+                <option value="image">画像生成</option>
+                <option value="safety">制約</option>
               </select>
             </label>
             <label class="field">
